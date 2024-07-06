@@ -1,0 +1,3 @@
+Learn a program that simultaneously processes analyzes text files to find the meaning of keywords.
+Create two versions of the program: one using the threading module for multithreaded programming,
+ the other using the multiprocessing module for programming.
