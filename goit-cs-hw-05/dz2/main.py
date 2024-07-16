@@ -3,6 +3,7 @@ import urllib.request
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from concurrent.futures import ThreadPoolExecutor
+import re
 
 def fetch_text(url):
     with urllib.request.urlopen(url) as response:
@@ -29,11 +30,8 @@ def reduce_function(key_values):
 def map_reduce(text, search_words=None):
     # Видалення знаків пунктуації
     text = remove_punctuation(text)
-    words = text.split()
-
-    # Якщо задано список слів для пошуку, враховувати тільки ці слова
-    if search_words:
-        words = [word for word in words if word in search_words]
+    # Розбиваємо текст на слова
+    words = re.findall(r'\b\w+\b', text.lower())
 
     # Паралельний Мапінг
     with ThreadPoolExecutor() as executor:
