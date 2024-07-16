@@ -1,15 +1,19 @@
+import string
 import urllib.request
 from collections import defaultdict
 import matplotlib.pyplot as plt
-from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor
 
 def fetch_text(url):
     with urllib.request.urlopen(url) as response:
         return response.read().decode('utf-8')
 
-def map_function(text):
-    words = text.split()
-    return [(word, 1) for word in words]
+
+def remove_punctuation(text):
+    return text.translate(str.maketrans("", "", string.punctuation))
+
+def map_function(word):
+    return word, 1
 
 def shuffle_function(mapped_values):
     shuffled = defaultdict(list)
@@ -17,24 +21,32 @@ def shuffle_function(mapped_values):
         shuffled[key].append(value)
     return shuffled.items()
 
-def reduce_function(shuffled_values):
-    reduced = {}
-    for key, values in shuffled_values:
-        reduced[key] = sum(values)
-    return reduced
+def reduce_function(key_values):
+    key, values = key_values
+    return key, sum(values)
 
 # Виконання MapReduce
-def map_reduce(text):
-    # Крок 1: Мапінг
-    mapped_values = map_function(text)
+def map_reduce(text, search_words=None):
+    # Видалення знаків пунктуації
+    text = remove_punctuation(text)
+    words = text.split()
+
+    # Якщо задано список слів для пошуку, враховувати тільки ці слова
+    if search_words:
+        words = [word for word in words if word in search_words]
+
+    # Паралельний Мапінг
+    with ThreadPoolExecutor() as executor:
+        mapped_values = list(executor.map(map_function, words))
 
     # Крок 2: Shuffle
     shuffled_values = shuffle_function(mapped_values)
 
-    # Крок 3: Редукція
-    reduced_values = reduce_function(shuffled_values)
+    # Паралельна Редукція
+    with ThreadPoolExecutor() as executor:
+        reduced_values = list(executor.map(reduce_function, shuffled_values))
 
-    return reduced_values
+    return dict(reduced_values)
 
 def visualize_top_words(word_counts, top_n=10):
     sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
@@ -52,13 +64,13 @@ def visualize_top_words(word_counts, top_n=10):
 
 
 def main():
-    url = "https://en.wikipedia.org/wiki/Laurence_Waddell"
+    url = "https://gutenberg.net.au/ebooks01/0100021.txt"
     
     # Завантажуємо текст
     text = fetch_text(url)
-    
+    search_words = ['war', 'peace', 'love']
     # Підрахунок частоти слів за допомогою MapReduce
-    word_counts = map_reduce(text)
+    word_counts = map_reduce(text, search_words)
     
     # Візуалізація результатів
     visualize_top_words(word_counts)
