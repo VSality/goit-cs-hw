@@ -4,7 +4,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 import os
 from multiprocessing import Process
-import json  # Для работы с JSON
+import json 
 
 # web Server
 class HttpHandler(BaseHTTPRequestHandler):
@@ -83,6 +83,9 @@ def run(server_class=HTTPServer, handler_class=HttpHandler):
 # Socket Server
 import socket
 from concurrent import futures as cf
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+from datetime import datetime
 
 def run_server(ip, port):
     
@@ -94,7 +97,27 @@ def run_server(ip, port):
                 break
             data = received.decode()
             print(f'Data received: {data}')
-            sock.send(received)
+            
+            #MongoDb workflow
+            
+            client = MongoClient(
+                "mongodb+srv://goitlearn:j345nv3l3k5v3l%3B@cluster0.k8awq13.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+            server_api=ServerApi('1'))
+            
+            db = client.messages
+            
+            data_dict = json.loads(data)
+            data_dict['date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            
+            try:
+                result_many = db.msg.insert_one(data_dict)
+            except Exception as e:
+                print(f"MongoDb Error: {e}")
+           
+            result = db.msg.find({})
+            for el in result:
+                print(el)
+                
         print(f'Socket connection closed {address}')
         sock.close()
 
@@ -111,6 +134,10 @@ def run_server(ip, port):
             print(f'Destroy server')
         finally:
             server_socket.close()
+            
+            
+
+
 
 if __name__ == '__main__':
     host = 'localhost'
